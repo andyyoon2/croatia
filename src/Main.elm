@@ -3,48 +3,106 @@ module Main exposing (..)
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
+import Task exposing (Task)
+import Time exposing (Month(..))
 
 
 -- MAIN
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.element
+  { init = init
+  , view = view
+  , update = update
+  , subscriptions = subscriptions
+  }
 
 
 -- MODEL
 
-type alias Model = Int
+type alias Model =
+  { zone : Time.Zone
+  , time : Time.Posix
+  }
 
-init : Model
-init =
-  0
+init : () -> (Model, Cmd Msg)
+init _ =
+  ( Model Time.utc (Time.millisToPosix 0)
+  , Task.perform AdjustTimeZone Time.here
+  --, Task.perform AdjustCurrentTime Time.now
+  )
 
 
 -- UPDATE
 
 type Msg
-  = Increment
-  | Decrement
+  = AdjustTimeZone Time.Zone
+  | AdjustCurrentTime Time.Posix
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Increment ->
-      model + 1
+    AdjustTimeZone newZone ->
+      ( { model | zone = newZone }
+      , Cmd.none
+      )
+    AdjustCurrentTime newTime ->
+      ( { model | time = newTime }
+      , Cmd.none
+      )
 
-    Decrement ->
-      model - 1
 
+-- SUBSCRIPTIONS
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
+
+
+-- OK HELPERS I GUESS
+
+monthToString : Time.Month -> String
+monthToString month =
+  case month of
+    Jan -> "January"
+    Feb -> "Februrary"
+    Mar -> "March"
+    Apr -> "April"
+    May -> "May"
+    Jun -> "June"
+    Jul -> "July"
+    Aug -> "August"
+    Sep -> "September"
+    Oct -> "October"
+    Nov -> "November"
+    Dec -> "December"
+
+getNowPart : (Time.Zone -> Time.Posix -> int) -> Task x int
+getNowPart fn =
+  Task.map2 fn Time.here Time.now
 
 -- VIEW
 
 view : Model -> Html Msg
 view model =
+  let
+    -- day = String.fromInt (Time.toDay model.zone model.time)
+    -- month = monthToString (Time.toMonth model.zone model.time)
+    -- year = String.fromInt (Time.toYear model.zone model.time)
+    day = String.fromInt (Task.perform getNowPart Time.toDay)
+  in
   main_ []
-    [ heading ] 
+    [ heading 
+    --, time day month year
+    , p [] [ text day ]
+    ]
 
 heading =
   div []
     [ h1 [] [ text "Hello Elm!" ]
     ]
 
+time : String -> String -> String -> Html Msg
+time day month year =
+  p []
+    [ text ("Today is " ++ day ++ " of " ++  month ++ ", " ++ year) ]
