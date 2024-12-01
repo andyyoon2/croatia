@@ -40,8 +40,11 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
+  main_ []
+    [ heading ] 
+
+heading =
   div []
-    [ button [ onClick Decrement ] [ text "-" ]
-    , div [] [ text (String.fromInt model) ]
-    , button [ onClick Increment ] [ text "+" ]
+    [ h1 [] [ text "Hello Elm!" ]
     ]
+
