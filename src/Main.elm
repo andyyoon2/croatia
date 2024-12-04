@@ -28,8 +28,10 @@ type alias Model =
 init : () -> (Model, Cmd Msg)
 init _ =
   ( Model Time.utc (Time.millisToPosix 0)
-  , Task.perform AdjustTimeZone Time.here
-  --, Task.perform AdjustCurrentTime Time.now
+  , Cmd.batch
+    [ Task.perform AdjustTimeZone Time.here
+    , Task.perform AdjustCurrentTime Time.now
+    ]
   )
 
 
@@ -77,24 +79,18 @@ monthToString month =
     Nov -> "November"
     Dec -> "December"
 
-getNowPart : (Time.Zone -> Time.Posix -> int) -> Task x int
-getNowPart fn =
-  Task.map2 fn Time.here Time.now
-
 -- VIEW
 
 view : Model -> Html Msg
 view model =
   let
-    -- day = String.fromInt (Time.toDay model.zone model.time)
-    -- month = monthToString (Time.toMonth model.zone model.time)
-    -- year = String.fromInt (Time.toYear model.zone model.time)
-    day = String.fromInt (Task.perform getNowPart Time.toDay)
+    day = String.fromInt (Time.toDay model.zone model.time)
+    month = monthToString (Time.toMonth model.zone model.time)
+    year = String.fromInt (Time.toYear model.zone model.time)
   in
   main_ []
     [ heading 
-    --, time day month year
-    , p [] [ text day ]
+    , time day month year
     ]
 
 heading =
