@@ -31,7 +31,7 @@ init _ =
   ( Model Time.utc (Time.millisToPosix 0)
   , Cmd.batch
     [ Task.perform AdjustTimeZone Time.here
-    , Task.perform AdjustCurrentTime Time.now
+    , Task.perform Tick Time.now
     ]
   )
 
@@ -40,7 +40,7 @@ init _ =
 
 type Msg
   = AdjustTimeZone Time.Zone
-  | AdjustCurrentTime Time.Posix
+  | Tick Time.Posix
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -49,7 +49,7 @@ update msg model =
       ( { model | zone = newZone }
       , Cmd.none
       )
-    AdjustCurrentTime newTime ->
+    Tick newTime ->
       ( { model | time = newTime }
       , Cmd.none
       )
@@ -59,7 +59,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+  Time.every 1000 Tick
 
 
 -- OK HELPERS I GUESS
@@ -87,20 +87,16 @@ returnDate = 1743408000000
 dateDeltaDisplay : Int -> Int -> String
 dateDeltaDisplay start end =
   let
-    delta = end - start
+    delta = abs (end - start)
+    totalSeconds = delta // 1000
+    totalMinutes = totalSeconds // 60
+    totalHours = totalMinutes // 60
+    totalDays = totalHours // 24
   in
-    if delta <= 0 then
-      "Start is before end. Not Implemented!"
-    else
-      let
-        totalSeconds = delta // 1000
-        totalMinutes = totalSeconds // 60
-        totalHours = totalMinutes // 60
-        totalDays = totalHours // 24
-      in
-        String.fromInt totalDays ++ " days, " ++
-        String.fromInt (modBy 24 totalHours) ++ " hours, " ++
-        String.fromInt (modBy 60 totalMinutes) ++ " minutes"
+    String.fromInt totalDays ++ " days, " ++
+    String.fromInt (modBy 24 totalHours) ++ " hours, " ++
+    String.fromInt (modBy 60 totalMinutes) ++ " minutes, " ++
+    String.fromInt (modBy 60 totalSeconds) ++ " seconds"
 
 
 -- VIEW
@@ -111,11 +107,14 @@ view model =
     day = String.fromInt (Time.toDay model.zone model.time)
     month = monthToString (Time.toMonth model.zone model.time)
     year = String.fromInt (Time.toYear model.zone model.time)
+    countdownDisplay = dateDeltaDisplay (Time.posixToMillis model.time) departDate
+    -- tilReturnDisplay = dateDeltaDisplay (Time.posixToMillis model.time) returnDate
   in
   main_ [ style "padding" "16px", style "textAlign" "center" ]
     [ heading 
     , time day month year
-    , p [] [ text (dateDeltaDisplay (Time.posixToMillis model.time) departDate ++ " until takeoff!") ]
+    , p [] [ text (countdownDisplay ++ " until takeoff!") ]
+    -- , p [] [ text (tilReturnDisplay ++ " until return!") ]
     ]
 
 heading =
@@ -126,4 +125,4 @@ heading =
 time : String -> String -> String -> Html Msg
 time day month year =
   p []
-    [ text ("Today is " ++ day ++ " of " ++  month ++ ", " ++ year) ]
+    [ text ("Today is " ++ day ++ " " ++  month ++ ", " ++ year) ]
